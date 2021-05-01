@@ -2,7 +2,11 @@ abstract class Location<T> {
   T data;
   Map<String, String> params;
 
-  Location(this.data, this.params);
+  Location({required this.data, required this.params});
 
-  String? uniqueKey;
+  abstract String uniqueKey;
+}
+
+abstract class BasicLocation extends Location<dynamic> {
+  BasicLocation() : super(data: Object(), params: Map<String, String>());
 }

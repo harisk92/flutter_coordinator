@@ -1,28 +1,32 @@
+import 'package:coordinator/coordinator.dart';
 import 'package:flutter/widgets.dart';
 
 import 'coordinator_back_button_dispatcher.dart';
-import 'coordinator_provider.dart';
-import 'coordinator_route_information_parser.dart';
 import 'coordinator_route_information_provider.dart';
 import 'coordinator_router_delegate.dart';
 
 class Coordinator extends StatefulWidget {
   final String? name;
-  final CoordinatorRouterDelegate? routerDelegate;
-  final CoordinatorRouteInformationParser? routeInformationParser;
+  final CoordinatorRouterDelegate routerDelegate;
 
   Coordinator({
     Key? key,
     this.name,
-    this.routerDelegate,
-    this.routeInformationParser,
-  }) : super(key: key);
+    required Location initialLocation,
+    required List<CoordinatorRoute> routes,
+    CoordinatorNavigationBuilder? navigationBuilder,
+  })  : this.routerDelegate = CoordinatorRouterDelegate(
+          initialLocation: initialLocation,
+          routes: routes,
+          navigationBuilder: navigationBuilder,
+        ),
+        super(key: key);
 
-  static CoordinatorRouterDelegate of(BuildContext context) {
+  static CoordinatorRouter of(BuildContext context) {
     try {
-      return Router.of(context).routerDelegate as CoordinatorRouterDelegate;
+      return Router.of(context).routerDelegate as CoordinatorRouter;
     } catch (e) {
-      return CoordinatorProvider.of(context)!.routerDelegate;
+      throw Exception("Can't find appropriate router delegate");
     }
   }
 
@@ -31,15 +35,11 @@ class Coordinator extends StatefulWidget {
 }
 
 class _CoordinatorState extends State<Coordinator> {
-  GlobalKey _routerKey = GlobalKey();
-  CoordinatorRouterDelegate? get routerDelegate => widget.routerDelegate;
-  CoordinatorBackButtonDispatcher get backButtonDispatcher =>
-      CoordinatorBackButtonDispatcher(delegate: routerDelegate);
+  CoordinatorRouterDelegate get routerDelegate => widget.routerDelegate;
 
   @override
   void initState() {
     super.initState();
-    routerDelegate!.configurationReporting = false;
   }
 
   @override
@@ -50,20 +50,18 @@ class _CoordinatorState extends State<Coordinator> {
 
   @override
   Widget build(BuildContext context) {
-    final parentRouteInformationProvider =
-        Router.of(context).routeInformationProvider;
-    final parentDelegate =
-        Router.of(context).routerDelegate as CoordinatorRouterDelegate;
-    parentDelegate.activeNestedDelegate = routerDelegate;
-    routerDelegate!.parent = parentDelegate;
-
-    return Router(
-      key: _routerKey,
-      routerDelegate: routerDelegate!,
-      routeInformationParser: CoordinatorRouteInformationParser(),
-      routeInformationProvider: ChildCoordinatorRouteInformationProvider(
-          parent: parentRouteInformationProvider),
-      backButtonDispatcher: backButtonDispatcher,
+    return CoordinatorRoot(
+      routerDelegate: routerDelegate,
+      builder: (context, routerDelegate) => Router(
+        routerDelegate: routerDelegate,
+        routeInformationParser: CoordinatorRouteInformationParser(),
+        routeInformationProvider: ChildCoordinatorRouteInformationProvider(
+          parent: Router.of(context).routeInformationProvider,
+        ),
+        backButtonDispatcher: CoordinatorBackButtonDispatcher(
+          delegate: routerDelegate,
+        ),
+      ),
     );
   }
 }

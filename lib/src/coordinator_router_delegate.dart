@@ -4,120 +4,129 @@ import 'coordinator_navigation_builder.dart';
 import 'coordinator_route.dart';
 import 'location.dart';
 
+abstract class CoordinatorRouter {
+  void push(Location location);
+  void popToRoot();
+  void pushReplacement(Location location);
+}
+
 class CoordinatorRouterDelegate extends RouterDelegate<String?>
-    with ChangeNotifier, PopNavigatorRouterDelegateMixin<String?> {
-  List<Location> _navigationStack;
-  CoordinatorNavigationBuilder _navigationBuilder;
-  bool _enableConfigurationReporting = true;
+    with ChangeNotifier, PopNavigatorRouterDelegateMixin<String?>
+    implements CoordinatorRouter {
+  List<Location> navigationStack;
+  CoordinatorNavigationBuilder navigationBuilder;
   WidgetBuilder? initialRouteBuilder;
-  CoordinatorRouterDelegate? activeNestedDelegate;
 
   CoordinatorRouterDelegate? parent;
   List<CoordinatorRouterDelegate> children;
-  List<CoordinatorRoute>? _routes;
+  List<CoordinatorRoute> routes;
+  GlobalKey<NavigatorState> key;
+
+  TransitionDelegate<dynamic> transitionDelegate;
+  bool reportsRouteUpdateToEngine;
+  List<NavigatorObserver> observers;
+  String? restorationScopeId;
 
   CoordinatorRouterDelegate({
-    CoordinatorNavigationBuilder? navigationBuilder,
     Location? initialLocation,
-    List<CoordinatorRoute>? routes,
+    required List<CoordinatorRoute> routes,
+    CoordinatorNavigationBuilder? navigationBuilder,
     PageWidgetBuilder? pageBuilder,
+    this.transitionDelegate = const DefaultTransitionDelegate<dynamic>(),
+    this.observers = const <NavigatorObserver>[],
+    this.reportsRouteUpdateToEngine = false,
     this.initialRouteBuilder,
-  })  : this._navigationStack =
-            initialLocation == null ? [] : [initialLocation],
-        this._navigationBuilder = navigationBuilder ??
+    this.restorationScopeId,
+  })  : this.navigationStack = initialLocation == null ? [] : [initialLocation],
+        this.navigationBuilder = navigationBuilder ??
             DefaultNavigationBuilder(
               routes: routes,
               pageBuilder: pageBuilder ?? defaultPageBuilder,
             ),
-        this._routes = routes,
+        this.routes = routes,
+        this.key = GlobalKey<NavigatorState>(),
         this.children = [];
 
   @override
   Widget build(BuildContext context) {
-    if (_navigationStack.isEmpty) {
-      return initialRouteBuilder != null
-          ? initialRouteBuilder!(context)
-          : Container();
+    if (navigationStack.isEmpty) {
+      return initialRouteBuilder?.call(context) ?? Container();
     }
 
     return Navigator(
       key: navigatorKey,
+      transitionDelegate: transitionDelegate,
+      reportsRouteUpdateToEngine: reportsRouteUpdateToEngine,
+      observers: observers,
+      restorationScopeId: restorationScopeId,
       onPopPage: (route, result) {
         bool didPop = route.didPop(result);
         if (didPop) {
-          _navigationStack.removeLast();
+          navigationStack.removeLast();
         }
 
         return didPop;
       },
-      pages: _navigationBuilder.build(
+      pages: navigationBuilder.build(
         context,
-        _navigationStack,
+        navigationStack,
         currentLocation,
       ),
     );
   }
 
   @override
-  GlobalKey<NavigatorState> get navigatorKey => GlobalKey<NavigatorState>();
+  GlobalKey<NavigatorState> get navigatorKey => key;
 
   Location? get currentLocation =>
-      _navigationStack.isNotEmpty && _enableConfigurationReporting
-          ? _navigationStack.last
-          : null;
+      navigationStack.isNotEmpty ? navigationStack.last : null;
 
   @override
   Future<void> setInitialRoutePath(String? configuration) {
-    return _navigationStack.isEmpty
+    return navigationStack.isEmpty
         ? Future.value()
         : super.setInitialRoutePath(configuration);
   }
 
   @override
   Future<void> setNewRoutePath(String? path) async {
-    CoordinatorRoute? route = CoordinatorRoutes.findOneWithPath(_routes!, path);
-    if (route != null) {
-      _navigationStack.add(route.buildLocation(path!));
-      notifyListeners();
-    }
+    CoordinatorRoute? route = CoordinatorRoutes.findOneWithPath(routes, path);
+    if (route == null) return;
+
+    navigationStack.add(route.buildLocation(path!));
+    notifyListeners();
   }
 
+  @override
   void push(Location location) {
-    _navigationStack.add(location);
+    navigationStack.add(location);
     notifyListeners();
   }
 
+  @override
   void popToRoot() {
-    if (_navigationStack.isEmpty) {
-      return;
-    }
-
-    _navigationStack = [_navigationStack.first];
+    if (navigationStack.isEmpty) return;
+    navigationStack = [navigationStack.first];
     notifyListeners();
   }
 
+  @override
   void pushReplacement(Location location) {
-    if (_navigationStack.isNotEmpty) {
-      _navigationStack.removeLast();
-    }
-
-    _navigationStack.add(location);
+    if (navigationStack.isNotEmpty) navigationStack.removeLast();
+    navigationStack.add(location);
     notifyListeners();
   }
 
   @override
   String? get currentConfiguration {
-    if (currentLocation != null) {
-      CoordinatorRoute? route = CoordinatorRoutes.findOneOfLocationType(
-        _routes!,
-        currentLocation,
-      );
-      return route != null ? route.buildPath(currentLocation!) : null;
-    }
+    final currentLocation = this.currentLocation;
+    if (currentLocation == null) return null;
 
-    return null;
+    CoordinatorRoute? route = CoordinatorRoutes.findOneOfLocationType(
+      routes,
+      currentLocation,
+    );
+
+    return route?.buildPath(currentLocation);
   }
-
-  set configurationReporting(bool enable) =>
-      _enableConfigurationReporting = enable;
 }
