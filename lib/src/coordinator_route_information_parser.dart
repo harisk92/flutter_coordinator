@@ -1,12 +1,15 @@
 import 'package:flutter/widgets.dart';
 
+import 'optional.dart';
+
 class CoordinatorRouteInformationParser
-    extends RouteInformationParser<String?> {
+    extends RouteInformationParser<Optional<String>> {
   @override
-  Future<String?> parseRouteInformation(RouteInformation information) async =>
-      information.location;
+  Future<Optional<String>> parseRouteInformation(
+          RouteInformation information) async =>
+      Optional(data: information.location);
 
   @override
-  RouteInformation restoreRouteInformation(String? path) =>
-      RouteInformation(location: path);
+  RouteInformation restoreRouteInformation(Optional<String> path) =>
+      RouteInformation(location: path.data);
 }

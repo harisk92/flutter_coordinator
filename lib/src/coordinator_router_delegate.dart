@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'coordinator_navigation_builder.dart';
 import 'coordinator_route.dart';
 import 'location.dart';
+import 'optional.dart';
 
 abstract class CoordinatorRouter {
   void popToRoot();
@@ -12,8 +13,8 @@ abstract class CoordinatorRouter {
   void pushReplacement(Location location);
 }
 
-class CoordinatorRouterDelegate extends RouterDelegate<String?>
-    with ChangeNotifier, PopNavigatorRouterDelegateMixin<String?>
+class CoordinatorRouterDelegate extends RouterDelegate<Optional<String>>
+    with ChangeNotifier, PopNavigatorRouterDelegateMixin<Optional<String>>
     implements CoordinatorRouter {
   List<Location> navigationStack;
   CoordinatorNavigationBuilder navigationBuilder;
@@ -84,18 +85,22 @@ class CoordinatorRouterDelegate extends RouterDelegate<String?>
       navigationStack.isNotEmpty ? navigationStack.last : null;
 
   @override
-  Future<void> setInitialRoutePath(String? configuration) {
+  Future<void> setInitialRoutePath(Optional<String> configuration) {
     return navigationStack.isEmpty
         ? Future.value()
         : super.setInitialRoutePath(configuration);
   }
 
   @override
-  Future<void> setNewRoutePath(String? path) async {
-    CoordinatorRoute? route = CoordinatorRoutes.findOneWithPath(routes, path);
+  Future<void> setNewRoutePath(Optional<String> path) async {
+    CoordinatorRoute? route =
+        CoordinatorRoutes.findOneWithPath(routes, path.data);
     if (route == null) return;
 
-    navigationStack.add(route.buildLocation(path!));
+    final pathString = path.data;
+    if (pathString == null) return;
+
+    navigationStack.add(route.buildLocation(pathString));
     notifyListeners();
   }
 
@@ -120,15 +125,15 @@ class CoordinatorRouterDelegate extends RouterDelegate<String?>
   }
 
   @override
-  String? get currentConfiguration {
+  Optional<String> get currentConfiguration {
     final currentLocation = this.currentLocation;
-    if (currentLocation == null) return null;
+    if (currentLocation == null) return Optional();
 
     CoordinatorRoute? route = CoordinatorRoutes.findOneOfLocationType(
       routes,
       currentLocation,
     );
 
-    return route?.buildPath(currentLocation);
+    return Optional(data: route?.buildPath(currentLocation));
   }
 }
