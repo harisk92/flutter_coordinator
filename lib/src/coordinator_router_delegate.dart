@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'coordinator_navigation_builder.dart';
@@ -5,8 +7,8 @@ import 'coordinator_route.dart';
 import 'location.dart';
 
 abstract class CoordinatorRouter {
-  void push(Location location);
   void popToRoot();
+  void push(Location location);
   void pushReplacement(Location location);
 }
 
