@@ -13,6 +13,7 @@ abstract class CoordinatorRouter {
   void popToRoot();
   Future<dynamic?> push(Location location);
   void pushReplacement(Location location);
+  void pushNewRoot(Location location);
 }
 
 class CoordinatorRouterDelegate extends RouterDelegate<Optional<String>>
@@ -131,8 +132,13 @@ class CoordinatorRouterDelegate extends RouterDelegate<Optional<String>>
 
   @override
   void pushReplacement(Location location) {
-    if (navigationStack.isNotEmpty) navigationStack.clear();
+    if (navigationStack.isNotEmpty) navigationStack.removeLast();
     navigationStack.add(location);
+    notifyListeners();
+  }
+
+  void pushNewRoot(Location location) {
+    navigationStack = [location];
     notifyListeners();
   }
 
