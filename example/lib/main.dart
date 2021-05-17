@@ -12,7 +12,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return CoordinatorRoot(
       routerDelegate: CoordinatorRouterDelegate(
-        initialLocation: HomeLocation(),
+        //initialLocation: HomeLocation(),
+        initialRouteBuilder: (context) => Container(
+          color: Colors.red,
+          child: ElevatedButton(
+            onPressed: () => Coordinator.of(context).push(HomeLocation()),
+            child: Text("Hit me"),
+          ),
+        ),
         routes: [
           CoordinatorRoute<HomeLocation>(
             path: "/home",
@@ -44,7 +51,11 @@ class FirstScreen extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: ElevatedButton(
-          onPressed: () => Coordinator.of(context).push(SecondScreenLocation()),
+          onPressed: () async {
+            final result =
+                await Coordinator.of(context).push(SecondScreenLocation());
+            print("Result is $result");
+          },
           child: Text("Go to second screen"),
         ),
       ),
@@ -63,7 +74,15 @@ class SecondScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(),
       body: Center(
-        child: Text("Welcome to screen two"),
+        child: Column(
+          children: [
+            Text("Welcome to screen two"),
+            ElevatedButton(
+              onPressed: () => Coordinator.of(context).pop(["Hello world"]),
+              child: Text("Pop me"),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -77,7 +96,7 @@ class HomeLocation extends BasicLocation {
 class TabScreen extends HookWidget {
   @override
   Widget build(BuildContext context) {
-    final tabController = useTabController(initialLength: 2);
+    final tabController = useTabController(initialLength: 1);
     final bottomBarIndex = useState(0);
 
     return Scaffold(
@@ -117,7 +136,7 @@ class TabScreen extends HookWidget {
               ),
             ],
           ),
-          Coordinator(
+          /*Coordinator(
             name: "Schedule",
             initialLocation: FirstScreenLocation(),
             routes: [
@@ -130,9 +149,9 @@ class TabScreen extends HookWidget {
                 path: "/second_screen",
                 screenBuilder: (context, _) => SecondScreen(),
                 locationBuilder: (params) => SecondScreenLocation(),
-              ),
+              )
             ],
-          )
+          ),*/
         ],
       ),
     );

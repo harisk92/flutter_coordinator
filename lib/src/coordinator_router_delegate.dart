@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'coordinator_navigation_builder.dart';
@@ -8,8 +9,9 @@ import 'location.dart';
 import 'optional.dart';
 
 abstract class CoordinatorRouter {
+  void pop([dynamic result]);
   void popToRoot();
-  void push(Location location);
+  Future<dynamic?> push(Location location);
   void pushReplacement(Location location);
 }
 
@@ -56,6 +58,7 @@ class CoordinatorRouterDelegate extends RouterDelegate<Optional<String>>
       return initialRouteBuilder?.call(context) ?? Container();
     }
 
+    print(navigationStack);
     return Navigator(
       key: navigatorKey,
       transitionDelegate: transitionDelegate,
@@ -64,8 +67,10 @@ class CoordinatorRouterDelegate extends RouterDelegate<Optional<String>>
       restorationScopeId: restorationScopeId,
       onPopPage: (route, result) {
         bool didPop = route.didPop(result);
+        print(result);
         if (didPop) {
-          navigationStack.removeLast();
+          final last = navigationStack.removeLast();
+          last.result.complete(result);
         }
 
         return didPop;
@@ -83,6 +88,8 @@ class CoordinatorRouterDelegate extends RouterDelegate<Optional<String>>
 
   Location? get currentLocation =>
       navigationStack.isNotEmpty ? navigationStack.last : null;
+
+  NavigatorState? get navigatorState => key.currentState;
 
   @override
   Future<void> setInitialRoutePath(Optional<String> configuration) {
@@ -105,9 +112,14 @@ class CoordinatorRouterDelegate extends RouterDelegate<Optional<String>>
   }
 
   @override
-  void push(Location location) {
+  Future<dynamic?> push(Location location) async {
     navigationStack.add(location);
     notifyListeners();
+    return location.result.future;
+  }
+
+  void pop([dynamic result]) {
+    navigatorState?.pop(result);
   }
 
   @override
@@ -119,7 +131,7 @@ class CoordinatorRouterDelegate extends RouterDelegate<Optional<String>>
 
   @override
   void pushReplacement(Location location) {
-    if (navigationStack.isNotEmpty) navigationStack.removeLast();
+    if (navigationStack.isNotEmpty) navigationStack.clear();
     navigationStack.add(location);
     notifyListeners();
   }

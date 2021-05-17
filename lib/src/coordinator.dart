@@ -1,8 +1,8 @@
 import 'package:coordinator/coordinator.dart';
+import 'package:coordinator/src/coordinator_route_information_provider.dart';
 import 'package:flutter/widgets.dart';
 
 import 'coordinator_back_button_dispatcher.dart';
-import 'coordinator_route_information_provider.dart';
 import 'coordinator_router_delegate.dart';
 
 class Coordinator extends StatefulWidget {
@@ -55,9 +55,7 @@ class _CoordinatorState extends State<Coordinator> {
       builder: (context, routerDelegate) => Router(
         routerDelegate: routerDelegate,
         routeInformationParser: CoordinatorRouteInformationParser(),
-        routeInformationProvider: ChildCoordinatorRouteInformationProvider(
-          parent: Router.of(context).routeInformationProvider,
-        ),
+        routeInformationProvider: ChildCoordinatorRouteInformationProvider(),
         backButtonDispatcher: CoordinatorBackButtonDispatcher(
           delegate: routerDelegate,
         ),

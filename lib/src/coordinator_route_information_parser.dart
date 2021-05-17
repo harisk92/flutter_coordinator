@@ -11,5 +11,5 @@ class CoordinatorRouteInformationParser
 
   @override
   RouteInformation restoreRouteInformation(Optional<String> path) =>
-      RouteInformation(location: path.data);
+      RouteInformation(location: path.defaultOr("/"));
 }
